@@ -34,7 +34,7 @@ public class Grid {
     private final int UNDO_LIMIT;
     private final GraphicsContext GC;
     private static final HashMap<Long, Paint> COLORS = GameAssets.getColors();
-    private static final char[] prefixes = new char[] {'K', 'M', 'B', 'T', 'q', 'Q', 's', 'S'};
+    private static final char[] PREFIXES = new char[] {'K', 'M', 'B', 'T', 'q', 'Q', 's', 'S'};
     private final Timeline partialRenderTimeline, renderTimeline;
 
     public Grid(GraphicsContext gc, int gridSize, int undoLimit) {
@@ -296,7 +296,7 @@ public class Grid {
         }
 
         if (value > 10_000) {
-            tileText = round4(value) + " " + prefixes[(int) Math.log10(value) / 3 - 1];
+            tileText = round4(value) + " " + PREFIXES[(int) Math.log10(value) / 3 - 1];
         }
 
         GC.setFill(COLORS.getOrDefault(value, Color.GOLD));
