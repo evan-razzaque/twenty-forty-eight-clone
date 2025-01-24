@@ -59,6 +59,7 @@ public class Main extends Application {
 
         GameStorage.save(grid);
         grid.startGame(value);
+        updateScoreDisplay();
         drawGrid();
     }
 
@@ -91,7 +92,7 @@ public class Main extends Application {
             btn_gridSize.setOnAction(this::changeGridSize);
 
             btn_gridSize.setOnMouseExited(event ->
-                    previewDisplayGc.clearRect(0, 0, previewDisplay.getWidth(), previewDisplay.getHeight())
+                previewDisplayGc.clearRect(0, 0, previewDisplay.getWidth(), previewDisplay.getHeight())
             );
 
             gridSizeSelector.add(btn_gridSize, (i-2) % 3, (i-2) / 3);
