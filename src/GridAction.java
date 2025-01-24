@@ -5,7 +5,7 @@ public class GridAction {
     private static final int[] DOWN = new int[] {1, 0};
 
     public static void moveNumbers(Grid grid, String direction) {
-        switch (direction) {
+        switch (direction.toLowerCase()) {
             case "left":
                 for (int row = 0; row < grid.getGridSize(); row++) {
                     for (int col = 1; col < grid.getGridSize(); col++)

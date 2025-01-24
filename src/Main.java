@@ -57,7 +57,7 @@ public class Main extends Application {
             return;
         }
 
-        grid.save();
+        GameStorage.save(grid);
         grid.startGame(value);
         drawGrid();
     }
@@ -65,18 +65,18 @@ public class Main extends Application {
     private void displayGridPreview(MouseEvent event) {
         int gridSize = Integer.parseInt(((Button) event.getSource()).getText());
 
-        if (gridSize == grid.getGridSize()) {
+        if (gridSize == grid.getGridSize() || !GameStorage.saveExists(gridSize)) {
             return;
         }
 
-        gridPreview = new Grid(previewDisplayGc, new Label(), gridSize, 0);
+        gridPreview = new Grid(previewDisplayGc, gridSize, 0);
         gridPreview.startGame();
 
         for (int row = 0; row < gridSize; row++) {
             for (int col = 0; col < gridSize; col++) {
                 previewDisplayGc.strokeRect(
-                        gridPreview.getTileSize() * col, gridPreview.getTileSize() * row,
-                        gridPreview.getTileSize(), gridPreview.getTileSize()
+                    gridPreview.getTileSize() * col, gridPreview.getTileSize() * row,
+                    gridPreview.getTileSize(), gridPreview.getTileSize()
                 );
             }
         }
@@ -98,9 +98,12 @@ public class Main extends Application {
         }
     }
 
+    private void updateScoreDisplay() {
+        lb_score.setText("High Score: " + grid.getHighScore() + "\nScore: " + grid.getScore());
+    }
+
     private void gameAction(KeyEvent ke) {
         String direction = "";
-        boolean gridChanged = false;
 
         switch (ke.getCode()) {
             case W, UP -> direction = "up";
@@ -113,16 +116,12 @@ public class Main extends Application {
                 if (!ke.isControlDown()) break;
 
                 grid.undo();
-                lb_score.setText("High Score: " + grid.getHighScore() + "\nScore: " + grid.getScore());
                 root.requestFocus();
             }
         }
 
-        if (!direction.isEmpty()) gridChanged = grid.move(direction);
-
-        if (gridChanged) {
-            lb_score.setText("High Score: " + grid.getHighScore() + "\nScore: " + grid.getScore());
-        }
+        if (!direction.isEmpty()) grid.move(direction);
+        updateScoreDisplay();
     }
 
     Grid grid, gridPreview;
@@ -148,7 +147,7 @@ public class Main extends Application {
         btn_undo = new Button("Undo");
         btn_restart = new Button("New Game");
         
-        grid = new Grid(gc, lb_score, 4, 1);
+        grid = new Grid(gc, 4, 1);
         root = new Pane();
         gridSizeSelector = new GridPane(5, 5);
         drawGrid();
@@ -178,7 +177,7 @@ public class Main extends Application {
 
         btn_undo.setOnAction(event -> {
             grid.undo();
-            lb_score.setText("High Score: " + grid.getHighScore() + "\nScore: " + grid.getScore());
+            updateScoreDisplay();
             root.requestFocus();
         });
 
@@ -187,13 +186,13 @@ public class Main extends Application {
 
             try {
                 grid.restartGame(grid.getGridSize());
-                lb_score.setText("High Score: " + grid.getHighScore() + "\nScore: " + grid.getScore());
+                updateScoreDisplay();
             } catch (NumberFormatException e) {
                 new Alert(Alert.AlertType.ERROR, "Invalid grid size input").showAndWait();
             }
         });
 
-        stage.setOnCloseRequest(event -> grid.save());
+        stage.setOnCloseRequest(event -> GameStorage.save(grid));
 
         if (grid.getUndoLimit() == 0) {
             btn_undo.setDisable(true);
@@ -201,6 +200,7 @@ public class Main extends Application {
 
         grid.startGame();
         root.requestFocus();
+        updateScoreDisplay();
         stage.show();
     }
 

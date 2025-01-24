@@ -5,7 +5,6 @@ import javafx.geometry.VPos;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.control.Alert;
 import javafx.scene.control.ButtonType;
-import javafx.scene.control.Label;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.Paint;
 import javafx.scene.text.Font;
@@ -23,50 +22,46 @@ public class Grid {
     private double tileSize;
     private long[][] numberGrid, combinedNumbersLocations;
 
+    private ArrayList<GridNumber> gridNumbers;
     private ArrayList<long[][]> previousGridStates;
     private ArrayList<Integer> previousNumberCounts;
     private ArrayList<Long> previousScores;
-    private int undoLimit;
-    private ArrayList<GridNumber> gridNumbers;
-    private Timeline partialRenderTimeline, renderTimeline;
 
     private int moveCount, numberCount;
     private long score, highScore;
-    private Label lb;
-    private GraphicsContext gc;
-    private static final HashMap<Long, Paint> COLORS = GameAssets.getColors();
-    private static final char[] prefixes = new char[] {'K', 'M', 'B', 'T', 'q', 'Q', 's', 'S'};
     private boolean hasWon, gameContinued;
 
-    public Grid(GraphicsContext gc, Label lb, int gridSize, int undoLimit) {
-        this.gc = gc;
-        this.lb = lb;
-        this.gc.setTextAlign(TextAlignment.CENTER);
-        this.gc.setTextBaseline(VPos.CENTER);
+    private final int UNDO_LIMIT;
+    private final GraphicsContext GC;
+    private static final HashMap<Long, Paint> COLORS = GameAssets.getColors();
+    private static final char[] prefixes = new char[] {'K', 'M', 'B', 'T', 'q', 'Q', 's', 'S'};
+    private final Timeline partialRenderTimeline, renderTimeline;
+
+    public Grid(GraphicsContext gc, int gridSize, int undoLimit) {
+        this.GC = gc;
+        this.GC.setTextAlign(TextAlignment.CENTER);
+        this.GC.setTextBaseline(VPos.CENTER);
 
         if (gc.getCanvas().getWidth() != gc.getCanvas().getHeight())
             throw new IllegalStateException("Canvas width must be equal to canvas height");
 
         this.gridSize = gridSize;
         tileSize = gc.getCanvas().getWidth() / gridSize;
-        this.undoLimit = undoLimit;
+        this.UNDO_LIMIT = undoLimit;
 
         partialRenderTimeline = new Timeline();
         renderTimeline = GameAssets.getRenderTimeline(this, 80);
     }
 
     public void load() {
-        String[] gridData = GameStorage.load(this);
+        String[] gridData = GameStorage.load(gridSize);
 
         char[] numbers = gridData[0].toCharArray();
-        int c = 0;
 
         for (int row = 0; row < gridSize; row++) {
             for (int col = 0; col < gridSize; col++) {
-                if (numbers[c] != '_')
-                    numberGrid[row][col] = (long) (Math.pow(2, numbers[c] - 32));
-
-                c++;
+                if (numbers[row * gridSize + col] == '_') continue;
+                numberGrid[row][col] = (long) (Math.pow(2, numbers[row * gridSize + col] - 32));
             }
         }
 
@@ -77,16 +72,12 @@ public class Grid {
         gameContinued = gridData[5].equals("1");
     }
 
-    public void save() {
-        GameStorage.save(this);
-    }
-
     public void startGame(int gridSize) {
         if (gridSize < 2)
             throw new IllegalArgumentException("Grid size cannot be less than 2");
 
         this.gridSize = gridSize;
-        tileSize = gc.getCanvas().getWidth() / gridSize;
+        tileSize = GC.getCanvas().getWidth() / gridSize;
         numberGrid = new long[gridSize][gridSize];
         gridNumbers = new ArrayList<>();
         previousGridStates = new ArrayList<>();
@@ -98,12 +89,12 @@ public class Grid {
         if (numberCount == 0) {
             addNumber();
             addNumber();
+
+            GameStorage.save(this);
         }
 
         setGridNumbers();
-        save();
         renderGrid();
-        lb.setText("High Score: " + highScore + "\nScore: " + score);
     }
 
     public void startGame() {
@@ -119,7 +110,7 @@ public class Grid {
     }
 
     public int getUndoLimit() {
-        return undoLimit;
+        return UNDO_LIMIT;
     }
 
     public int getNumberCount() {
@@ -185,14 +176,16 @@ public class Grid {
         int r2 = r1 + d[0];
         int c2 = c1 + d[1];
 
+        // Calculates the amount of moves an individual tile can move in a given direction
         int moves = (int) (Math.abs(r1 - (gridSize - 1) * Math.signum(d[0] + 1)) * Math.abs(d[0]) + Math.abs(c1 - (gridSize - 1) * Math.signum(d[1] + 1)) * Math.abs(d[1]));
+
         int combineCount = 0;
 
         for (int i = 0; i < moves; i++) {
             if (numberGrid[r2][c2] != value && numberGrid[r2][c2] != 0 || combinedNumbersLocations[r2][c2] == 1 || combineCount > 0)
                 break;
 
-            // Occurs before any numbers move
+            // Saves previous grid state
             if (moveCount == 0) {
                 if (getPlayableMoves() > 0) storeGridState();
 
@@ -202,6 +195,7 @@ public class Grid {
                 }
             }
 
+            // Combining tiles
             if (numberGrid[r2][c2] == value) {
                 value += value;
                 combineCount++;
@@ -212,10 +206,12 @@ public class Grid {
                 if (score > highScore) highScore = score;
             }
 
+            // Moving the tile
             numberGrid[r2][c2] = value;
             numberGrid[r1][c1] = 0;
             moveCount++;
 
+            // Set values for tile objects
             for (GridNumber n : gridNumbers) {
                 if (n.getRow() == r1 && n.getCol() == c1) {
                     n.setPos(r2, c2);
@@ -226,6 +222,7 @@ public class Grid {
             if (value == 2048 && !hasWon)
                 hasWon = true;
 
+            // Updating tile location pointers
             r1 += d[0];
             c1 += d[1];
             r2 += d[0];
@@ -243,24 +240,21 @@ public class Grid {
         previousNumberCounts.add(numberCount);
         previousScores.add(score);
 
-        if (previousGridStates.size() > undoLimit) {
+        if (previousGridStates.size() > UNDO_LIMIT) {
             previousGridStates.removeFirst();
             previousNumberCounts.removeFirst();
             previousScores.removeFirst();
         }
     }
 
-    public boolean move(String direction) {
+    public void move(String direction) {
         moveCount = 0;
         combinedNumbersLocations = new long[gridSize][gridSize];
         GridAction.moveNumbers(this, direction);
 
         if (moveCount > 0) {
             render();
-            return true;
         }
-
-        return false;
     }
 
     public void undo() {
@@ -275,7 +269,7 @@ public class Grid {
         previousScores.removeLast();
 
         setGridNumbers();
-        save();
+        GameStorage.save(this);
         renderGrid();
     }
 
@@ -305,22 +299,22 @@ public class Grid {
             tileText = round4(value) + " " + prefixes[(int) Math.log10(value) / 3 - 1];
         }
 
-        gc.setFill(COLORS.getOrDefault(value, Color.GOLD));
+        GC.setFill(COLORS.getOrDefault(value, Color.GOLD));
         if (value > 131072) {
-            gc.setFill(Color.BLACK);
+            GC.setFill(Color.BLACK);
         }
 
-        gc.fillRect(
+        GC.fillRect(
             this.tileSize*col + tileOffset + offsetX,
             this.tileSize*row + tileOffset + offsetY,
             tileSize,
             tileSize
         );
 
-        gc.setFont(Font.font("Segoe UI", FontWeight.BOLD, fontSize));
-        gc.setFill(Color.WHITE);
-        if (value < 8) gc.setFill(Color.valueOf("#444444"));
-        gc.fillText(tileText,
+        GC.setFont(Font.font("Segoe UI", FontWeight.BOLD, fontSize));
+        GC.setFill(Color.WHITE);
+        if (value < 8) GC.setFill(Color.valueOf("#444444"));
+        GC.fillText(tileText,
             this.tileSize/2 + this.tileSize*col + offsetX,
             this.tileSize/2 + this.tileSize*row + offsetY
         );
@@ -332,7 +326,7 @@ public class Grid {
 
     public void partialRenderGrid(int step, int totalSteps) {
         double offsetX, offsetY;
-        gc.clearRect(0, 0, gc.getCanvas().getWidth(), gc.getCanvas().getHeight());
+        GC.clearRect(0, 0, GC.getCanvas().getWidth(), GC.getCanvas().getHeight());
 
         for (GridNumber n : gridNumbers) {
             offsetX = ((n.getCol() - n.getOldCol()) * this.tileSize) * ((double) step / totalSteps);
@@ -344,7 +338,7 @@ public class Grid {
 
     public void renderGrid() {
         long n;
-        gc.clearRect(0, 0, gc.getCanvas().getWidth(), gc.getCanvas().getHeight());
+        GC.clearRect(0, 0, GC.getCanvas().getWidth(), GC.getCanvas().getHeight());
 
         for (int row = 0; row < gridSize; row++) {
             for (int col = 0; col < gridSize; col++) {
@@ -398,14 +392,11 @@ public class Grid {
         hasWon = false;
         gameContinued = false;
 
-        save();
+        GameStorage.save(this);
         startGame(gridSize);
-        lb.setText("High Score: " + highScore + "\nScore: " + score);
     }
 
     public void displayLoseDialog() {
-        lb.setText("High Score: " + highScore + "\nScore: " + score);
-
         Alert alert = GameAssets.getLoseDialog();
         Platform.runLater(() -> {
             Optional<ButtonType> choice = alert.showAndWait();
@@ -418,8 +409,6 @@ public class Grid {
     }
 
     public void displayWinDialog() {
-        lb.setText("High Score: " + highScore + "\nScore: " + score);
-
         Alert alert = GameAssets.getWinDialog();
         Platform.runLater(() -> {
             Optional<ButtonType> choice = alert.showAndWait();
