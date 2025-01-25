@@ -33,10 +33,10 @@ public class Main extends Application {
         for (int row = 0; row < gridSize; row++) {
             for (int col = 0; col < gridSize; col++) {
                 Rectangle rectangle = new Rectangle(
-                    canvas.getLayoutX() + grid.getTileSize() * col,
-                    canvas.getLayoutY() + grid.getTileSize() * row,
-                    grid.getTileSize(),
-                    grid.getTileSize()
+                    canvas.getLayoutX() + grid.getCellSize() * col,
+                    canvas.getLayoutY() + grid.getCellSize() * row,
+                    grid.getCellSize(),
+                    grid.getCellSize()
                 );
 
                 rectangle.setFill(Color.WHITE);
@@ -76,8 +76,8 @@ public class Main extends Application {
         for (int row = 0; row < gridSize; row++) {
             for (int col = 0; col < gridSize; col++) {
                 previewDisplayGc.strokeRect(
-                    gridPreview.getTileSize() * col, gridPreview.getTileSize() * row,
-                    gridPreview.getTileSize(), gridPreview.getTileSize()
+                        gridPreview.getCellSize() * col, gridPreview.getCellSize() * row,
+                    gridPreview.getCellSize(), gridPreview.getCellSize()
                 );
             }
         }

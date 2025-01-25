@@ -11,6 +11,7 @@ import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
 import javafx.scene.text.TextAlignment;
 import javafx.util.Duration;
+import org.json.JSONObject;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -19,8 +20,11 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class Grid {
     private int gridSize;
-    private double tileSize;
-    private long[][] numberGrid, combinedNumbersLocations;
+    private double cellSize;
+    private long[][] numberGrid;
+
+    /** An array to store whether a cell has been combined or not while performing a move **/
+    private boolean[][] combinedStateGrid;
 
     private ArrayList<GridNumber> gridNumbers;
     private ArrayList<long[][]> previousGridStates;
@@ -46,7 +50,7 @@ public class Grid {
             throw new IllegalStateException("Canvas width must be equal to canvas height");
 
         this.gridSize = gridSize;
-        tileSize = gc.getCanvas().getWidth() / gridSize;
+        cellSize = gc.getCanvas().getWidth() / gridSize;
         this.UNDO_LIMIT = undoLimit;
 
         partialRenderTimeline = new Timeline();
@@ -54,9 +58,9 @@ public class Grid {
     }
 
     public void load() {
-        String[] gridData = GameStorage.load(gridSize);
+        JSONObject gridData = GameStorage.load(gridSize);
 
-        char[] numbers = gridData[0].toCharArray();
+        char[] numbers = gridData.getString("grid").toCharArray();
 
         for (int row = 0; row < gridSize; row++) {
             for (int col = 0; col < gridSize; col++) {
@@ -65,11 +69,11 @@ public class Grid {
             }
         }
 
-        highScore = Long.parseLong(gridData[1]);
-        score = Long.parseLong(gridData[2]);
-        numberCount = Integer.parseInt(gridData[3]);
-        hasWon = gridData[4].equals("1");
-        gameContinued = gridData[5].equals("1");
+        highScore = gridData.getLong("highScore");
+        score = gridData.getLong("score");
+        numberCount = gridData.getInt("numberCount");
+        hasWon = gridData.getBoolean("hasWon");
+        gameContinued = gridData.getBoolean("gameContinued");
     }
 
     public void startGame(int gridSize) {
@@ -77,7 +81,7 @@ public class Grid {
             throw new IllegalArgumentException("Grid size cannot be less than 2");
 
         this.gridSize = gridSize;
-        tileSize = GC.getCanvas().getWidth() / gridSize;
+        cellSize = GC.getCanvas().getWidth() / gridSize;
         numberGrid = new long[gridSize][gridSize];
         gridNumbers = new ArrayList<>();
         previousGridStates = new ArrayList<>();
@@ -105,8 +109,8 @@ public class Grid {
         return gridSize;
     }
 
-    public double getTileSize() {
-        return tileSize;
+    public double getCellSize() {
+        return cellSize;
     }
 
     public int getUndoLimit() {
@@ -173,19 +177,22 @@ public class Grid {
         long value = numberGrid[r1][c1];
         if (value == 0) return;
 
+        // Target cell
         int r2 = r1 + d[0];
         int c2 = c1 + d[1];
 
-        // Calculates the amount of moves an individual tile can move in a given direction
+        // Calculates the amount of moves an individual number can move in a given direction
         int moves = (int) (Math.abs(r1 - (gridSize - 1) * Math.signum(d[0] + 1)) * Math.abs(d[0]) + Math.abs(c1 - (gridSize - 1) * Math.signum(d[1] + 1)) * Math.abs(d[1]));
 
         int combineCount = 0;
 
         for (int i = 0; i < moves; i++) {
-            if (numberGrid[r2][c2] != value && numberGrid[r2][c2] != 0 || combinedNumbersLocations[r2][c2] == 1 || combineCount > 0)
+            // If a number has reached another number with a different value, the number has already combined with
+            // another number, or the target cell has already had a combination occur
+            if (numberGrid[r2][c2] != value && numberGrid[r2][c2] != 0 || combinedStateGrid[r2][c2] || combineCount > 0)
                 break;
 
-            // Saves previous grid state
+            // Saving previous grid state
             if (moveCount == 0) {
                 if (getPlayableMoves() > 0) storeGridState();
 
@@ -195,23 +202,23 @@ public class Grid {
                 }
             }
 
-            // Combining tiles
+            // Combining numbers
             if (numberGrid[r2][c2] == value) {
                 value += value;
                 combineCount++;
-                combinedNumbersLocations[r2][c2] = 1;
+                combinedStateGrid[r2][c2] = true;
                 numberCount--;
                 score += value;
 
                 if (score > highScore) highScore = score;
             }
 
-            // Moving the tile
+            // Moving the numbers
             numberGrid[r2][c2] = value;
             numberGrid[r1][c1] = 0;
             moveCount++;
 
-            // Set values for tile objects
+            // Update number objects
             for (GridNumber n : gridNumbers) {
                 if (n.getRow() == r1 && n.getCol() == c1) {
                     n.setPos(r2, c2);
@@ -222,7 +229,7 @@ public class Grid {
             if (value == 2048 && !hasWon)
                 hasWon = true;
 
-            // Updating tile location pointers
+            // Updating cell pointers
             r1 += d[0];
             c1 += d[1];
             r2 += d[0];
@@ -249,7 +256,7 @@ public class Grid {
 
     public void move(String direction) {
         moveCount = 0;
-        combinedNumbersLocations = new long[gridSize][gridSize];
+        combinedStateGrid = new boolean[gridSize][gridSize];
         GridAction.moveNumbers(this, direction);
 
         if (moveCount > 0) {
@@ -283,20 +290,20 @@ public class Grid {
 
     public void drawNumber(int col, int row, double offsetX, double offsetY, long value) {
         double fontSize;
-        double tileSize = this.tileSize * 0.9;
-        double tileOffset = (this.tileSize - tileSize) / 2;
-        String tileText = String.valueOf(value);
+        double cellSize = this.cellSize * 0.9;
+        double cellOffset = (this.cellSize - cellSize) / 2;
+        String cellText = String.valueOf(value);
 
         if (value < 100) {
-            fontSize = this.tileSize * 0.366;
+            fontSize = this.cellSize * 0.366;
         } else if (value < 1000) {
-            fontSize = this.tileSize * 0.333;
+            fontSize = this.cellSize * 0.333;
         } else {
-            fontSize = this.tileSize * 0.233;
+            fontSize = this.cellSize * 0.233;
         }
 
         if (value > 10_000) {
-            tileText = round4(value) + " " + PREFIXES[(int) Math.log10(value) / 3 - 1];
+            cellText = round4(value) + " " + PREFIXES[(int) Math.log10(value) / 3 - 1];
         }
 
         GC.setFill(COLORS.getOrDefault(value, Color.GOLD));
@@ -305,18 +312,18 @@ public class Grid {
         }
 
         GC.fillRect(
-            this.tileSize*col + tileOffset + offsetX,
-            this.tileSize*row + tileOffset + offsetY,
-            tileSize,
-            tileSize
+                this.cellSize * col + cellOffset + offsetX,
+                this.cellSize * row + cellOffset + offsetY,
+            cellSize,
+            cellSize
         );
 
         GC.setFont(Font.font("Segoe UI", FontWeight.BOLD, fontSize));
         GC.setFill(Color.WHITE);
         if (value < 8) GC.setFill(Color.valueOf("#444444"));
-        GC.fillText(tileText,
-            this.tileSize/2 + this.tileSize*col + offsetX,
-            this.tileSize/2 + this.tileSize*row + offsetY
+        GC.fillText(cellText,
+                this.cellSize / 2 + this.cellSize * col + offsetX,
+                this.cellSize / 2 + this.cellSize * row + offsetY
         );
     }
 
@@ -329,8 +336,8 @@ public class Grid {
         GC.clearRect(0, 0, GC.getCanvas().getWidth(), GC.getCanvas().getHeight());
 
         for (GridNumber n : gridNumbers) {
-            offsetX = ((n.getCol() - n.getOldCol()) * this.tileSize) * ((double) step / totalSteps);
-            offsetY = ((n.getRow() - n.getOldRow()) * this.tileSize) * ((double) step / totalSteps);
+            offsetX = ((n.getCol() - n.getOldCol()) * this.cellSize) * ((double) step / totalSteps);
+            offsetY = ((n.getRow() - n.getOldRow()) * this.cellSize) * ((double) step / totalSteps);
 
             drawNumber(n.getOldCol(), n.getOldRow(), offsetX, offsetY, n.getOldValue());
         }
