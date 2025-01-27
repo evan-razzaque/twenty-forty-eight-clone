@@ -1,10 +1,6 @@
 <h1>Installation</h1>
 
-This application requires Java 21 with JavaFX bundled inside.
-
-Windows: https://download.bell-sw.com/java/21.0.5+11/bellsoft-jdk21.0.5+11-windows-amd64-full.msi<br>
-Linux: https://download.bell-sw.com/java/21.0.6+10/bellsoft-jdk21.0.6+10-linux-amd64-full.deb<br>
-Mac: https://download.bell-sw.com/java/21.0.6+10/bellsoft-jdk21.0.6+10-macos-aarch64.pkg<br>
+This application requires Java 21+.
 
 <h1>Usage</h1>
 
