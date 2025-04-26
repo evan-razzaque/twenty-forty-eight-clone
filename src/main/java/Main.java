@@ -21,6 +21,9 @@ import javafx.stage.Stage;
  * @author Evan Razzaque
  */
 public class Main extends Application {
+    /**
+     * A method to draw the grid on the screen.
+     */
     private void drawGrid() {
         int gridSize = grid.getGridSize();
 
@@ -47,6 +50,11 @@ public class Main extends Application {
         }
     }
 
+    /**
+     * A method to start a new game with a given grid size.
+     *
+     * @param event The event instance of the clicked grid size button
+     */
     private void changeGridSize(ActionEvent event) {
         previewDisplayGc.clearRect(0, 0, previewDisplay.getWidth(), previewDisplay.getHeight());
 
@@ -63,6 +71,11 @@ public class Main extends Application {
         drawGrid();
     }
 
+    /**
+     * A method to display the grid with the size corresponding to the grid size button being hovered.
+     *
+     * @param event The event instance of the grid size button being hovered
+     */
     private void displayGridPreview(MouseEvent event) {
         int gridSize = Integer.parseInt(((Button) event.getSource()).getText());
 
@@ -83,6 +96,9 @@ public class Main extends Application {
         }
     }
 
+    /**
+     * A method to add all the grid size buttons to the screen.
+     */
     private void addGridSizes() {
         for (int i = 2; i <= 25; i++) {
             Button btn_gridSize = new Button(String.valueOf(i));
@@ -99,10 +115,18 @@ public class Main extends Application {
         }
     }
 
+    /**
+     * A method to update the score display.
+     */
     private void updateScoreDisplay() {
         lb_score.setText("High Score: " + grid.getHighScore() + "\nScore: " + grid.getScore());
     }
 
+    /**
+     * A method to perform game actions based on player input.
+     *
+     * @param ke The keyboard event instance.
+     */
     private void gameAction(KeyEvent ke) {
         String direction = "";
 
@@ -133,6 +157,11 @@ public class Main extends Application {
     Label lb_score, lb_changeGridSize;
     Button btn_undo, btn_restart;
 
+    /**
+     * The method to set up the window and game.
+     *
+     * @param stage The stage instance of the application
+     */
     @Override
     public void start(Stage stage) {
         canvas = new Canvas(750, 750);
@@ -205,6 +234,11 @@ public class Main extends Application {
         stage.show();
     }
 
+    /**
+     * The method to start the application.
+     *
+     * @param args Unused
+     */
     public static void main(String[] args) {
         launch(args);
     }

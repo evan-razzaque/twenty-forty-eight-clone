@@ -11,8 +11,10 @@ import java.nio.file.Path;
  * @author Evan Razzaque
  */
 public abstract class GameStorage {
-    /** A format string used to the path of a grid save, where '%d' is the gridSize. **/
+    /** A format string used to the path of a grid save, where '%d' is the gridSize **/
     private static final String SAVE_FILE_TEMPLATE = "SaveData/grid%d.json";
+
+    /** The path to save the grid data to **/
     private static final String SAVE_FOLDER_PATH = SAVE_FILE_TEMPLATE.substring(0, SAVE_FILE_TEMPLATE.indexOf('/') + 1);
 
     /** The file to save the game data to **/
@@ -59,7 +61,7 @@ public abstract class GameStorage {
     }
 
     /**
-     * A method to save a grid's state to a file.
+     * A method to save a grid's state to its save file.
      *
      * @param grid The grid object to save
      */

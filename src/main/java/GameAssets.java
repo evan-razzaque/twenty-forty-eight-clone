@@ -9,9 +9,27 @@ import javafx.util.Duration;
 
 import java.util.HashMap;
 
+/**
+ * A class containing game assets.
+ *
+ * @author Evan Razzaque
+ */
 public class GameAssets {
-    private static Alert loseDialog, winDialog;
+    /**
+     * The dialog that shows up when the player loses
+     */
+    private static Alert loseDialog;
 
+    /**
+     * The dialog that shows up when the player loses
+     */
+    private static Alert winDialog;
+
+    /**
+     * A hashmap mapping tile numbers to background colors for a tile.
+     *
+     * @return the hashmap of colors
+     */
     public static HashMap<Long, Paint> getColors() {
         HashMap<Long, Paint> colors = new HashMap<>();
         colors.put(2L, Color.valueOf("#eee4da"));
@@ -30,6 +48,13 @@ public class GameAssets {
         return colors;
     }
 
+    /**
+     * Returns a timeline used to update the grid display and game logic.
+     *
+     * @param grid An instance of a {@link Grid}.
+     * @param ms The duration of how long the tiles should take to move to their new position
+     * @return the render timeline
+     */
     public static Timeline getRenderTimeline(Grid grid, double ms) {
         return new Timeline(new KeyFrame(Duration.millis(ms), event -> {
             grid.addNumber();
@@ -46,6 +71,11 @@ public class GameAssets {
         }));
     }
 
+    /**
+     * A method to get the dialog when the player loses.
+     *
+     * @return lose dialog
+     */
     public static Alert getLoseDialog() {
         if (loseDialog != null) {
             return loseDialog;
@@ -62,6 +92,11 @@ public class GameAssets {
         return loseDialog;
     }
 
+    /**
+     * A method to get the dialog when the player win.
+     *
+     * @return win dialog
+     */
     public static Alert getWinDialog() {
         if (winDialog != null) {
             return winDialog;

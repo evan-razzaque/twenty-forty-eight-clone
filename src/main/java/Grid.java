@@ -18,29 +18,119 @@ import java.util.HashMap;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
 
+/**
+ * A class representing a game of 2048.
+ *
+ * @author Evan Razzaque
+ */
 public class Grid {
+    /**
+     * The size of the grid
+     */
     private int gridSize;
+
+    /**
+     * The size (in pixels) of each cell
+     */
     private double cellSize;
+
+    /**
+     * A 2D array containing the numbers for the grid
+     */
     private long[][] numberGrid;
 
-    /** An array to store whether a cell has been combined or not while performing a move **/
+    /**
+     * An array to store whether a cell has been combined or not while performing a move
+     */
     private boolean[][] combinedStateGrid;
 
+    /**
+     * Used to store grid number objects for animating tile movement
+     */
     private ArrayList<GridNumber> gridNumbers;
+
+    /**
+     * Used to stores previous grid states to allow the player to undo moves
+     */
     private ArrayList<long[][]> previousGridStates;
+
+    /**
+     * Stores the number count for each previous grid state
+     */
     private ArrayList<Integer> previousNumberCounts;
+
+    /**
+     * Stores the score for each previous grid state
+     */
     private ArrayList<Long> previousScores;
 
-    private int moveCount, numberCount;
-    private long score, highScore;
-    private boolean hasWon, gameContinued;
+    /**
+     * The number tiles each number moves while the player performs an action
+     */
+    private int moveCount;
 
+    /**
+     * The number of number tiles on the grid
+     */
+    private int numberCount;
+
+    /**
+     * The current score for the game
+     */
+    private long score;
+
+    /**
+     * The high score for the game and grid size
+     */
+    private long highScore;
+
+    /**
+     * Whether the player has reached the 2048 tile or not
+     */
+    private boolean hasWon;
+
+    /**
+     * Whether the player decided to continue the game after reach 2048
+     */
+    private boolean gameContinued;
+
+    /**
+     * The maximum amount of moves the player can undo
+     */
     private final int UNDO_LIMIT;
-    private final GraphicsContext GC;
-    private static final HashMap<Long, Paint> COLORS = GameAssets.getColors();
-    private static final char[] PREFIXES = new char[] {'K', 'M', 'B', 'T', 'q', 'Q', 's', 'S'};
-    private final Timeline partialRenderTimeline, renderTimeline;
 
+    /**
+     * The {@link GraphicsContext} instance to use to render the grid
+     */
+    private final GraphicsContext GC;
+
+    /**
+     * A hashmap mapping tile numbers to background colors for a tile
+     */
+    private static final HashMap<Long, Paint> COLORS = GameAssets.getColors();
+
+    /**
+     * Prefixes for displaying large numbers on a tile
+     */
+    private static final char[] PREFIXES = new char[] {'K', 'M', 'B', 'T', 'q', 'Q', 's', 'S'};
+
+    /**
+     * The render timeline used to animate the tiles moving
+     */
+    private final Timeline partialRenderTimeline;
+
+    /**
+     * The render timeline to update the grid display and game logic
+     */
+    private final Timeline renderTimeline;
+
+    /**
+     * A constructor for a grid.
+     *
+     * @param gc The {@link GraphicsContext} instance to use to render the grid
+     * @param gridSize The size of the grid
+     * @param undoLimit The maximum amount moves that can be undone
+     */
     public Grid(GraphicsContext gc, int gridSize, int undoLimit) {
         this.GC = gc;
         this.GC.setTextAlign(TextAlignment.CENTER);
@@ -57,6 +147,11 @@ public class Grid {
         renderTimeline = GameAssets.getRenderTimeline(this, 80);
     }
 
+    /**
+     * A method to load the grid's state from its save file. <br>
+     * A new file will be created if none exists.
+     * @see GameStorage#load(int)
+     */
     public void load() {
         JSONObject gridData = GameStorage.load(gridSize);
 
@@ -76,6 +171,11 @@ public class Grid {
         gameContinued = gridData.getBoolean("gameContinued");
     }
 
+    /**
+     * A method to start the game with a given grid size.
+     *
+     * @param gridSize The size of the grid
+     */
     public void startGame(int gridSize) {
         if (gridSize < 2)
             throw new IllegalArgumentException("Grid size cannot be less than 2");
@@ -101,42 +201,88 @@ public class Grid {
         renderGrid();
     }
 
+    /**
+     * A method to start the game with the same grid size.
+     */
     public void startGame() {
         startGame(gridSize);
     }
 
+    /**
+     * Gets the grid size.
+     *
+     * @return the size of the grid
+     */
     public int getGridSize() {
         return gridSize;
     }
 
+    /**
+     * Gets the cells' size.
+     *
+     * @return the size of each cell
+     */
     public double getCellSize() {
         return cellSize;
     }
 
+    /**
+     * Gets the undo limit.
+     *
+     * @return the undo limit
+     */
     public int getUndoLimit() {
         return UNDO_LIMIT;
     }
 
+    /**
+     * Gets the number of number tiles on the grid.
+     *
+     * @return the amount of numbers
+     */
     public int getNumberCount() {
         return numberCount;
     }
 
+    /**
+     * Gets the current score of the game.
+     *
+     * @return the current score
+     */
     public long getScore() {
         return score;
     }
 
+    /**
+     * Gets the highscore for the current grid size.
+     *
+     * @return the highscore for the grid size
+     */
     public long getHighScore() {
         return highScore;
     }
 
+    /**
+     * Determines if the player has won.
+     *
+     * @return whether the player has won or not
+     */
     public boolean getHasWon() {
         return hasWon;
     }
 
+    /**
+     * Determines if the game has been continued.
+     *
+     * @return whether the game is continued or not
+     */
     public boolean isGameContinued() {
         return gameContinued;
     }
 
+    /**
+     * A method to set the values in the grid numbers arraylist.
+     */
     public void setGridNumbers() {
         gridNumbers.clear();
 
@@ -149,12 +295,23 @@ public class Grid {
         }
     }
 
+    /**
+     * A method to add a number tile on the grid.
+     *
+     * @param col Grid column
+     * @param row Grid row
+     * @param value The value of tile
+     */
     public void addNumber(int col, int row, long value) {
         numberGrid[row][col] = value;
         gridNumbers.add(new GridNumber(row, col, value));
         numberCount++;
     }
 
+    /**
+     * A method to add a number tile with a random location and
+     * with a value of 2 or 4.
+     */
     public void addNumber() {
         int randRow, randCol;
         int randInt = (int) (1 + Math.random() * 100);
@@ -173,6 +330,13 @@ public class Grid {
         }
     }
 
+    /**
+     * A method to move an individual number across the grid.
+     *
+     * @param r1 The number's row on the grid
+     * @param c1 The number's column on the grid
+     * @param d The direction (x, y) to number
+     */
     public void moveNumber(int r1, int c1, int[] d) {
         long value = numberGrid[r1][c1];
         if (value == 0) return;
@@ -226,8 +390,7 @@ public class Grid {
                 }
             }
 
-            if (value == 2048 && !hasWon)
-                hasWon = true;
+            if (value == 2048 && !hasWon) hasWon = true;
 
             // Updating cell pointers
             r1 += d[0];
@@ -237,6 +400,9 @@ public class Grid {
         }
     }
 
+    /**
+     * A method to store the previous grid states.
+     */
     private void storeGridState() {
         long[][] numberGridTemp = new long[gridSize][gridSize];
 
@@ -254,6 +420,11 @@ public class Grid {
         }
     }
 
+    /**
+     * A method to move the numbers in a given direction.
+     *
+     * @param direction The direction to move the tile in
+     */
     public void move(String direction) {
         moveCount = 0;
         combinedStateGrid = new boolean[gridSize][gridSize];
@@ -264,6 +435,9 @@ public class Grid {
         }
     }
 
+    /**
+     * A method to undo the latest move and restore the previous grid state.
+     */
     public void undo() {
         if (previousGridStates.isEmpty()) return;
 
@@ -280,6 +454,13 @@ public class Grid {
         renderGrid();
     }
 
+    /**
+     * A method to return the value displayed with 4 digits with its decimal point shifted to the thousands' separator. <br>
+     * For example, 131,072 would become 131.0, which can be displayed as 131.0 K.
+     *
+     * @param value The value to truncate.
+     * @return the truncated value with its decimal point shifted
+     */
     public static double round4(long value) {
         int digits = (int) Math.log10(value);
         long divisor = (long) Math.pow(10, (digits / 3) * 3);
@@ -288,6 +469,15 @@ public class Grid {
         return (double) Math.round(value * roundingFactor / divisor) / roundingFactor;
     }
 
+    /**
+     * Draws a number on the grid with an offset.
+     *
+     * @param col Grid column
+     * @param row Grid row
+     * @param offsetX The x-offset of the number
+     * @param offsetY The y-offset of the number
+     * @param value The value of the number
+     */
     public void drawNumber(int col, int row, double offsetX, double offsetY, long value) {
         double fontSize;
         double cellSize = this.cellSize * 0.9;
@@ -312,8 +502,8 @@ public class Grid {
         }
 
         GC.fillRect(
-                this.cellSize * col + cellOffset + offsetX,
-                this.cellSize * row + cellOffset + offsetY,
+            this.cellSize * col + cellOffset + offsetX,
+            this.cellSize * row + cellOffset + offsetY,
             cellSize,
             cellSize
         );
@@ -322,15 +512,28 @@ public class Grid {
         GC.setFill(Color.WHITE);
         if (value < 8) GC.setFill(Color.valueOf("#444444"));
         GC.fillText(cellText,
-                this.cellSize / 2 + this.cellSize * col + offsetX,
-                this.cellSize / 2 + this.cellSize * row + offsetY
+            this.cellSize / 2 + this.cellSize * col + offsetX,
+            this.cellSize / 2 + this.cellSize * row + offsetY
         );
     }
 
+    /**
+     * A method to draw a number on the grid.
+     *
+     * @param col Grid column
+     * @param row Grid row
+     * @param value The value of the number
+     */
     public void drawNumber(int col, int row, long value) {
         drawNumber(col, row, 0, 0, value);
     }
 
+    /**
+     * Renders a single "frame" of during the animation of the numbers moving to their new location.
+     *
+     * @param step The current frame number
+     * @param totalSteps Total amount of frames
+     */
     public void partialRenderGrid(int step, int totalSteps) {
         double offsetX, offsetY;
         GC.clearRect(0, 0, GC.getCanvas().getWidth(), GC.getCanvas().getHeight());
@@ -343,6 +546,9 @@ public class Grid {
         }
     }
 
+    /**
+     * A method to render the grid.
+     */
     public void renderGrid() {
         long n;
         GC.clearRect(0, 0, GC.getCanvas().getWidth(), GC.getCanvas().getHeight());
@@ -356,6 +562,9 @@ public class Grid {
         }
     }
 
+    /**
+     * A method to render the numbers on the grid moving, then renders grid again once the animation has finished.
+     */
     public void render() {
         AtomicInteger i = new AtomicInteger(1);
         double renderTime = renderTimeline.getKeyFrames().getFirst().getTime().toMillis();
@@ -372,6 +581,10 @@ public class Grid {
         renderTimeline.playFromStart();
     }
 
+    /**
+     * Gets the number of moves the player can make.
+     * @return number of playable moves
+     */
     public int getPlayableMoves() {
         int moves = 0;
 
@@ -392,6 +605,11 @@ public class Grid {
         return moves;
     }
 
+    /**
+     * A method to restart the game with a new grid size.
+     *
+     * @param gridSize The size of the grid
+     */
     public void restartGame(int gridSize) {
         numberGrid = new long[this.gridSize][this.gridSize];
         score = 0;
@@ -403,6 +621,9 @@ public class Grid {
         startGame(gridSize);
     }
 
+    /**
+     * A method to display the game over dialog.
+     */
     public void displayLoseDialog() {
         Alert alert = GameAssets.getLoseDialog();
         Platform.runLater(() -> {
@@ -415,6 +636,9 @@ public class Grid {
         });
     }
 
+    /**
+     * A method to display the win dialog.
+     */
     public void displayWinDialog() {
         Alert alert = GameAssets.getWinDialog();
         Platform.runLater(() -> {
@@ -430,6 +654,12 @@ public class Grid {
         });
     }
 
+    /**
+     * A method used to format the numberGrid for the purposes of saving the numberGrid.
+     *
+     * @return A string containing each number on the grid all in one line.
+     * @see Grid#load()
+     */
     @Override
     public String toString() {
         StringBuilder numbers = new StringBuilder();
@@ -438,6 +668,7 @@ public class Grid {
         for (long[] row : numberGrid) {
             for (long col : row) {
                 if (col > 0) {
+                    // Since each value is a power of two, we store its exponent to save space
                     c = (char) ((int) Math.ceil(Math.log(col) / Math.log(2)) + 32);
                 } else {
                     c = '_';
